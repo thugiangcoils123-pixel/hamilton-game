@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hamilton Cozy Game</title>
+
+<style>
+body {
+  margin: 0;
+  background: #f6e6c9;
+  color: #5a3e2b;
+  font-family: "Nunito", cursive;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+h1 { color: #c47a2c; }
+
+canvas {
+  width: 100%;
+  max-width: 600px;
+  aspect-ratio: 6/5;
+  background: #fff8ec;
+  border-radius: 16px;
+  border: 2px solid #e0c097;
+}
+
+button {
+  margin: 5px;
+  padding: 10px;
+  background: #ffb84c;
+  border-radius: 10px;
+  border: none;
+}
+
+.avatar { font-size: 28px; cursor: pointer; }
+.selected { outline: 2px dashed orange; }
+
+#scores { list-style: none; padding: 0; }
+
+.hidden { display: none; }
+</style>
+</head>
+
+<body>
+
+<h1>🌿 Hamilton Cozy Game</h1>
+
+<div id="setup">
+  <input id="username" placeholder="Enter name">
+  <div id="avatars"></div>
+  <button onclick="startGame()">Start</button>
+</div>
+
+<div id="game" class="hidden">
+  <p id="info"></p>
+  <canvas id="canvas"></canvas>
+
+  <br>
+  <button onclick="undo()">Undo</button>
+  <button onclick="resetGame()">Reset</button>
+  <button onclick="showSolution()">Answer</button>
+  <button onclick="checkImpossible()">Impossible</button>
+
+  <h3>🏆 Daily Leaderboard</h3>
+  <ul id="scores"></ul>
+</div>
+
+<script>
+const winSound = new Audio("https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg");
+const errorSound = new Audio("https://actions.google.com/sounds/v1/cartoon/pop.ogg");
+
+let player = {};
+let usedHint = false;
+
+const avatars = ["🐻","🐰","🦊","🐱","🐶","🐼","🦌","🐸"];
+let selected=null;
+
+avatars.forEach(a=>{
+  let el=document.createElement("span");
+  el.innerText=a;
+  el.className="avatar";
+  el.onclick=()=>{
+    document.querySelectorAll(".avatar").forEach(x=>x.classList.remove("selected"));
+    el.classList.add("selected");
+    selected=a;
+  };
+  document.getElementById("avatars").appendChild(el);
+});
+
+function startGame(){
+  let name=document.getElementById("username").value;
+  if(!name||!selected){alert("Nhập đủ");return;}
+  player={name,avatar:selected};
+  window.player = player;
+
+  document.getElementById("setup").classList.add("hidden");
+  document.getElementById("game").classList.remove("hidden");
+
+  initGame();
+}
+
+/* GRAPH */
+class Graph{
+  constructor(n){
+    this.nodes=[];
+    this.edges={};
+    for(let i=0;i<n;i++){
+      this.nodes.push({id:i,x:Math.random(),y:Math.random()});
+      this.edges[i]=[];
+    }
+    for(let i=0;i<n-1;i++) this.connect(i,i+1);
+
+    for(let i=0;i<n;i++){
+      for(let j=i+2;j<n;j++){
+        if(Math.random()<0.3) this.connect(i,j);
+      }
+    }
+  }
+  connect(a,b){
+    this.edges[a].push(b);
+    this.edges[b].push(a);
+  }
+  isConnected(a,b){
+    return this.edges[a].includes(b);
+  }
+}
+
+/* ENGINE */
+class Engine{
+  constructor(graph){
+    this.graph=graph;
+    this.path=[];
+  }
+
+  move(to){
+    if(this.path.length===0){
+      this.path.push(to);
+      return;
+    }
+
+    let last=this.path[this.path.length-1];
+
+    if(!this.graph.isConnected(last,to)){
+      errorSound.play(); return;
+    }
+    if(this.path.includes(to)){
+      errorSound.play(); return;
+    }
+
+    this.path.push(to);
+  }
+
+  undo(){ this.path.pop(); }
+
+  complete(){
+    return this.path.length===this.graph.nodes.length;
+  }
+}
+
+let canvas=document.getElementById("canvas");
+let ctx=canvas.getContext("2d");
+
+let graph,engine,solution;
+let startTime;
+
+function resize(){
+  let r=canvas.getBoundingClientRect();
+  canvas.width=r.width;
+  canvas.height=r.height;
+}
+window.addEventListener("resize",resize);
+
+function initGame(){
+  resize();
+  graph=new Graph(8);
+  engine=new Engine(graph);
+  solution=findSolution(graph);
+  startTime=Date.now();
+  usedHint=false;
+  draw();
+}
+
+/* SOLVER */
+function findSolution(graph){
+  let n=graph.nodes.length;
+
+  function dfs(node,visited,path){
+    if(path.length===n) return path;
+
+    for(let next of graph.edges[node]){
+      if(!visited.has(next)){
+        visited.add(next);
+        let res=dfs(next,visited,[...path,next]);
+        if(res) return res;
+        visited.delete(next);
+      }
+    }
+    return null;
+  }
+
+  for(let i=0;i<n;i++){
+    let v=new Set([i]);
+    let res=dfs(i,v,[i]);
+    if(res) return res;
+  }
+  return null;
+}
+
+/* DRAW */
+function draw(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  graph.nodes.forEach(n=>{
+    graph.edges[n.id].forEach(to=>{
+      let t=graph.nodes[to];
+      ctx.strokeStyle="#cdb38b";
+      ctx.beginPath();
+      ctx.moveTo(n.x*canvas.width,n.y*canvas.height);
+      ctx.lineTo(t.x*canvas.width,t.y*canvas.height);
+      ctx.stroke();
+    });
+  });
+
+  for(let i=0;i<engine.path.length-1;i++){
+    let a=graph.nodes[engine.path[i]];
+    let b=graph.nodes[engine.path[i+1]];
+    ctx.strokeStyle="#6ec1a6";
+    ctx.lineWidth=4;
+    ctx.beginPath();
+    ctx.moveTo(a.x*canvas.width,a.y*canvas.height);
+    ctx.lineTo(b.x*canvas.width,b.y*canvas.height);
+    ctx.stroke();
+  }
+
+  graph.nodes.forEach(n=>{
+    let nx=n.x*canvas.width, ny=n.y*canvas.height;
+    ctx.beginPath();
+    ctx.arc(nx,ny,14,0,Math.PI*2);
+    ctx.fillStyle=engine.path.includes(n.id)?"#ff9f68":"#8fd19e";
+    ctx.fill();
+    ctx.strokeStyle="#fff";
+    ctx.stroke();
+  });
+
+  if(engine.complete()){
+    let time=Math.floor((Date.now()-startTime)/1000);
+
+    if(!usedHint){
+      winSound.play();
+      saveScore(time);
+      alert("WIN "+time+"s 🎉");
+    } else {
+      alert("Solved (no score vì dùng Answer)");
+    }
+  }
+}
+
+/* INPUT */
+canvas.addEventListener("pointerdown",e=>{
+  let r=canvas.getBoundingClientRect();
+  let x=e.clientX-r.left,y=e.clientY-r.top;
+
+  graph.nodes.forEach(n=>{
+    let nx=n.x*canvas.width,ny=n.y*canvas.height;
+    if(Math.hypot(nx-x,ny-y)<15){
+      engine.move(n.id);
+      draw();
+    }
+  });
+});
+
+function undo(){engine.undo();draw();}
+function resetGame(){initGame();}
+function showSolution(){
+  if(solution){
+    engine.path=[...solution];
+    usedHint=true;
+    draw();
+  }
+}
+function checkImpossible(){
+  if(!solution) alert("Đúng, không có lời giải");
+  else alert("Sai, map này có lời giải");
+}
+
+/* LOCAL LEADERBOARD */
+function saveScore(time){
+  const today = new Date().toISOString().slice(0,10);
+
+  let scores = JSON.parse(localStorage.getItem("scores") || "[]");
+
+  scores.push({
+    name: player.name,
+    avatar: player.avatar,
+    time: time,
+    date: today
+  });
+
+  scores = scores.filter(s=>s.date===today);
+  scores.sort((a,b)=>a.time-b.time);
+  scores = scores.slice(0,10);
+
+  localStorage.setItem("scores",JSON.stringify(scores));
+  renderLeaderboard();
+}
+
+function renderLeaderboard(){
+  let list=document.getElementById("scores");
+  list.innerHTML="";
+
+  let scores = JSON.parse(localStorage.getItem("scores") || "[]");
+
+  scores.forEach(s=>{
+    let li=document.createElement("li");
+    li.innerText=`${s.avatar} ${s.name} - ${s.time}s`;
+    list.appendChild(li);
+  });
+}
+
+renderLeaderboard();
+</script>
+
+</body>
+</html>
