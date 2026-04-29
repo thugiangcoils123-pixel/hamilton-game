@@ -3,12 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Hamilton Pixel Galaxy - Final Boss</title>
+<title>Hamilton Final Boss</title>
 
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 
 <style>
-/* ================= GLOBAL ================= */
 body{
   margin:0;
   font-family:'Press Start 2P', cursive;
@@ -16,7 +15,7 @@ body{
   color:white;
 }
 
-/* 🌌 BACKGROUND GALAXY ANIMATED */
+/* BACKGROUND */
 body::before{
   content:"";
   position:fixed;
@@ -26,34 +25,25 @@ body::before{
     radial-gradient(circle, #ff4da6 1px, transparent 1px),
     radial-gradient(circle, #22d3ee 1px, transparent 1px);
   background-size:50px 50px, 80px 80px;
-  animation:starsMove 60s linear infinite;
+  animation:move 60s linear infinite;
   z-index:-1;
 }
-
-@keyframes starsMove{
+@keyframes move{
   from{transform:translate(0,0);}
   to{transform:translate(-500px,-500px);}
 }
 
-/* ================= UI ================= */
-.container{
-  max-width:900px;
-  margin:auto;
-  padding:10px;
-}
+.container{max-width:900px;margin:auto;padding:10px;}
 
 .card{
-  background:linear-gradient(145deg, rgba(255,255,255,0.2), rgba(255,255,255,0.05));
-  border:4px solid rgba(255,255,255,0.8);
+  background:rgba(255,255,255,0.15);
+  border:4px solid white;
   border-radius:16px;
   padding:15px;
   margin:15px;
-  box-shadow:
-    0 0 20px #ff4da6,
-    inset 0 0 10px rgba(255,255,255,0.2);
+  box-shadow:0 0 20px #ff4da6;
 }
 
-/* BUTTON */
 button{
   font-family:inherit;
   background:#ff4da6;
@@ -62,14 +52,9 @@ button{
   margin:5px;
   color:white;
   cursor:pointer;
-  transition:0.2s;
 }
-button:hover{
-  transform:scale(1.1);
-  box-shadow:0 0 15px #ff4da6;
-}
+button:hover{transform:scale(1.1)}
 
-/* CANVAS */
 canvas{
   width:100%;
   height:420px;
@@ -79,20 +64,16 @@ canvas{
 
 /* AVATAR */
 .avatar{
-  width:60px;
-  height:60px;
+  width:60px;height:60px;
   image-rendering:pixelated;
   border:3px solid white;
-  margin:6px;
+  margin:5px;
   cursor:pointer;
-  transition:0.2s;
 }
-.avatar:hover{
-  transform:scale(1.2) rotate(3deg);
-}
+.avatar:hover{transform:scale(1.2)}
 .avatar.selected{
   border:3px solid yellow;
-  box-shadow:0 0 15px yellow;
+  box-shadow:0 0 10px yellow;
 }
 
 /* LEADERBOARD */
@@ -108,39 +89,37 @@ canvas{
 
 .leaderboard-item{
   display:flex;
+  justify-content:space-between;
   align-items:center;
-  gap:10px;
   background:rgba(0,0,0,0.7);
   border:2px solid white;
-  padding:10px;
   margin:6px;
+  padding:8px;
   opacity:0;
   transform:translateY(20px);
-  animation:fadeUp 0.5s forwards;
+  animation:fade 0.5s forwards;
 }
 
 .top{
   background:rgba(255,215,0,0.2);
+  box-shadow:0 0 15px gold;
   transform:scale(1.05);
-  box-shadow:0 0 20px gold;
 }
 
-@keyframes fadeUp{
+@keyframes fade{
   to{opacity:1; transform:translateY(0);}
 }
 
 .hidden{display:none}
 
-/* CONFETTI PIXEL */
+/* CONFETTI */
 .confetti{
   position:absolute;
-  width:6px;
-  height:6px;
-  background:red;
+  width:6px;height:6px;
   animation:fall 1s linear forwards;
 }
 @keyframes fall{
-  to{transform:translateY(200px); opacity:0;}
+  to{transform:translateY(200px);opacity:0;}
 }
 </style>
 </head>
@@ -149,32 +128,29 @@ canvas{
 
 <div class="container">
 
-<!-- SETUP -->
 <div id="setup" class="card">
   <h3>CHỌN NHÂN VẬT</h3>
   <input id="username" placeholder="Tên"><br><br>
   <div id="avatars"></div>
-  <button onclick="startGame()">PLAY ▶</button>
+  <button onclick="startGame()">PLAY</button>
 </div>
 
-<!-- GAME -->
 <div id="game" class="card hidden">
   <canvas id="canvas"></canvas>
   <div>
     <button onclick="undo()">UNDO</button>
     <button onclick="restart()">RESTART</button>
     <button onclick="hint()">HINT</button>
+    <button onclick="solve()">SOLVE</button>
   </div>
 </div>
 
-<!-- WIN -->
 <div id="win" class="card hidden">
   <h3>YOU WIN!</h3>
   <button onclick="nextLevel()">NEXT</button>
   <button onclick="showLeaderboard()">RANK</button>
 </div>
 
-<!-- LEADERBOARD -->
 <div id="leaderboard" class="card leaderboard hidden">
   <h3>🏆 RANK</h3>
   <div id="lb"></div>
@@ -189,15 +165,15 @@ let canvas=document.getElementById('canvas');
 let ctx=canvas.getContext('2d');
 canvas.width=800; canvas.height=420;
 
-/* ================= AVATAR SYSTEM ================= */
-function randomColor(){
-  const c=["#ff4da6","#22d3ee","#a855f7","#facc15","#00ffcc","#ff884d"];
+/* AVATAR */
+function randColor(){
+  const c=["#ff4da6","#22d3ee","#a855f7","#facc15","#00ffcc"];
   return c[Math.floor(Math.random()*c.length)];
 }
 
 function createAvatar(colors){
   let c=document.createElement("canvas");
-  c.width=16; c.height=16;
+  c.width=16;c.height=16;
   let ctx=c.getContext("2d");
 
   let p=[
@@ -211,10 +187,10 @@ function createAvatar(colors){
     [0,0,1,1,1,1,0,0],
   ];
 
-  for(let y=0;y<p.length;y++){
-    for(let x=0;x<p[y].length;x++){
+  for(let y=0;y<8;y++){
+    for(let x=0;x<8;x++){
       let v=p[y][x];
-      if(v!==0){
+      if(v){
         ctx.fillStyle=colors[v];
         ctx.fillRect(x*2,y*2,2,2);
       }
@@ -223,19 +199,19 @@ function createAvatar(colors){
   return c.toDataURL();
 }
 
-function generateAvatars(n=20){
+function genAvatars(n=20){
   let list=[];
   for(let i=0;i<n;i++){
     list.push(createAvatar({
-      1: randomColor(),
-      2: randomColor(),
+      1: randColor(),
+      2: randColor(),
       3: "#000"
     }));
   }
   return list;
 }
 
-const avatarList = generateAvatars(20);
+const avatarList=genAvatars(20);
 
 function loadAvatars(){
   let box=document.getElementById('avatars');
@@ -253,7 +229,6 @@ function loadAvatars(){
 }
 loadAvatars();
 
-/* ================= GAME ================= */
 function startGame(){
   let name=document.getElementById('username').value;
   if(!name||!selectedAvatar) return alert("Nhập đủ!");
@@ -263,9 +238,10 @@ function startGame(){
   initGame();
 }
 
+/* GRAPH */
 class Graph{
  constructor(n){
-  this.nodes=[]; this.edges={};
+  this.nodes=[];this.edges={};
   const MIN=0.18;
   const ok=(nodes,x,y)=>nodes.every(n=>Math.hypot(n.x-x,n.y-y)>MIN);
 
@@ -282,7 +258,6 @@ class Graph{
   }
 
   for(let i=0;i<n-1;i++) this.connect(i,i+1);
-
   for(let i=0;i<n;i++){
     for(let j=i+2;j<n;j++){
       if(Math.random()<0.3) this.connect(i,j);
@@ -326,10 +301,10 @@ function clickNode(id){
  draw();
 }
 
+/* DRAW */
 function draw(){
  ctx.clearRect(0,0,800,420);
 
- // nền
  graph.nodes.forEach(n=>{
    graph.edges[n.id].forEach(e=>{
      let b=graph.nodes[e];
@@ -341,7 +316,6 @@ function draw(){
    });
  });
 
- // đường neon
  ctx.strokeStyle='#ff4da6';
  ctx.lineWidth=5;
  ctx.shadowColor="#ff4da6";
@@ -358,18 +332,52 @@ function draw(){
 
  ctx.shadowBlur=0;
 
- // node
  graph.nodes.forEach(n=>{
-  ctx.shadowColor="#ff4da6";
-  ctx.shadowBlur=10;
-
   ctx.fillStyle=path.includes(n.id)?'#a855f7':'#fff';
   ctx.fillRect(n.x*800-5,n.y*420-5,10,10);
-
-  ctx.shadowBlur=0;
  });
 }
 
+/* DFS SOLVE */
+function findHamilton(){
+ let n=graph.nodes.length;
+ let visited=new Array(n).fill(false);
+ let res=[];
+
+ function dfs(node){
+   res.push(node);
+   visited[node]=true;
+
+   if(res.length===n) return true;
+
+   for(let next of graph.edges[node]){
+     if(!visited[next]){
+       if(dfs(next)) return true;
+     }
+   }
+
+   visited[node]=false;
+   res.pop();
+   return false;
+ }
+
+ for(let i=0;i<n;i++){
+   if(dfs(i)) return res;
+   visited.fill(false);
+   res=[];
+ }
+
+ return null;
+}
+
+function solve(){
+ let s=findHamilton();
+ if(!s) return alert("Không có!");
+ path=s;
+ draw();
+}
+
+/* ACTION */
 function hint(){
  for(let i=0;i<graph.nodes.length;i++){
   if(!path.includes(i)){
@@ -381,7 +389,6 @@ function hint(){
  }
  draw();
 }
-
 function undo(){path.pop();draw();}
 function restart(){initGame();}
 
@@ -391,13 +398,13 @@ function nextLevel(){
  initGame();
 }
 
-/* ================= WIN EFFECT ================= */
+/* WIN */
 function confetti(){
  for(let i=0;i<40;i++){
   let c=document.createElement("div");
   c.className="confetti";
   c.style.left=Math.random()*window.innerWidth+"px";
-  c.style.background=randomColor();
+  c.style.background=randColor();
   document.body.appendChild(c);
   setTimeout(()=>c.remove(),1000);
  }
@@ -407,9 +414,10 @@ function win(){
  document.getElementById('win').classList.remove('hidden');
  confetti();
  saveScore();
+ renderLeaderboard();
 }
 
-/* ================= LEADERBOARD ================= */
+/* LEADERBOARD */
 function saveScore(){
  let data=JSON.parse(localStorage.getItem('lb')||'[]');
  data.push({name:player.name,avatar:player.avatar,level});
@@ -417,11 +425,7 @@ function saveScore(){
  localStorage.setItem('lb',JSON.stringify(data.slice(0,10)));
 }
 
-function showLeaderboard(){
- let board=document.getElementById('leaderboard');
- board.classList.remove('hidden');
- setTimeout(()=>board.classList.add('show'),10);
-
+function renderLeaderboard(){
  let lb=document.getElementById('lb');
  lb.innerHTML='';
  let data=JSON.parse(localStorage.getItem('lb')||'[]');
@@ -431,12 +435,21 @@ function showLeaderboard(){
   d.className='leaderboard-item'+(i===0?' top':'');
   d.style.animationDelay=(i*0.1)+'s';
 
-  d.innerHTML=`#${i+1}
-  <img src='${p.avatar}' width='30'>
-  ${p.name} - Level ${p.level}`;
-
+  d.innerHTML=`
+    <span>#${i+1}</span>
+    <img src='${p.avatar}' width='30'>
+    <span>${p.name}</span>
+    <span>Lv ${p.level}</span>
+  `;
   lb.appendChild(d);
  });
+}
+
+function showLeaderboard(){
+ let board=document.getElementById('leaderboard');
+ board.classList.remove('hidden');
+ setTimeout(()=>board.classList.add('show'),10);
+ renderLeaderboard();
 }
 
 function closeLeaderboard(){
