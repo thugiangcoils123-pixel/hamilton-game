@@ -3,130 +3,91 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Hamilton Final Boss</title>
+<title>Hamilton Galaxy Final Boss</title>
 
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 
 <style>
 body{
-  margin:0;
-  font-family:'Press Start 2P', cursive;
-  overflow:hidden;
-  color:white;
+ margin:0;
+ font-family:'Press Start 2P', cursive;
+ background:#020617;
+ color:white;
+ overflow:hidden;
 }
 
-/* BACKGROUND */
-body::before{
-  content:"";
-  position:fixed;
-  width:200%;
-  height:200%;
-  background:
-    radial-gradient(circle, #ff4da6 1px, transparent 1px),
-    radial-gradient(circle, #22d3ee 1px, transparent 1px);
-  background-size:50px 50px, 80px 80px;
-  animation:move 60s linear infinite;
-  z-index:-1;
-}
-@keyframes move{
-  from{transform:translate(0,0);}
-  to{transform:translate(-500px,-500px);}
-}
-
-.container{max-width:900px;margin:auto;padding:10px;}
+.container{max-width:900px;margin:auto;padding:10px}
 
 .card{
-  background:rgba(255,255,255,0.15);
-  border:4px solid white;
-  border-radius:16px;
-  padding:15px;
-  margin:15px;
-  box-shadow:0 0 20px #ff4da6;
+ background:rgba(255,255,255,0.08);
+ border:3px solid white;
+ border-radius:15px;
+ padding:15px;
+ margin:10px;
+ backdrop-filter: blur(10px);
 }
 
 button{
-  font-family:inherit;
-  background:#ff4da6;
-  border:3px solid white;
-  padding:10px;
-  margin:5px;
-  color:white;
-  cursor:pointer;
+ font-family:inherit;
+ background:#ff4da6;
+ border:2px solid white;
+ padding:10px;
+ margin:5px;
+ cursor:pointer;
 }
 button:hover{transform:scale(1.1)}
 
 canvas{
-  width:100%;
-  height:420px;
-  background:#000;
-  border:4px solid white;
+ width:100%;
+ height:420px;
+ background:black;
+ border:3px solid white;
 }
 
-/* TIMER */
-#timer{
-  margin-top:10px;
-  font-size:12px;
-  color:#facc15;
-}
-
-/* AVATAR */
 .avatar{
-  width:60px;height:60px;
-  image-rendering:pixelated;
-  border:3px solid white;
-  margin:5px;
-  cursor:pointer;
+ width:60px;height:60px;
+ border:2px solid white;
+ margin:5px;
+ cursor:pointer;
 }
-.avatar:hover{transform:scale(1.2)}
 .avatar.selected{
-  border:3px solid yellow;
-  box-shadow:0 0 10px yellow;
+ border:2px solid yellow;
+ box-shadow:0 0 10px yellow;
 }
 
-/* LEADERBOARD */
+#timer{color:#facc15;margin-top:10px}
+
 .leaderboard{
-  position:fixed;
-  bottom:-100%;
-  left:0;
-  width:100%;
-  max-width:900px;
-  transition:0.5s;
+ position:fixed;
+ bottom:-100%;
+ left:0;
+ width:100%;
+ max-width:900px;
+ transition:0.5s;
 }
-.leaderboard.show{bottom:10px;}
+.leaderboard.show{bottom:10px}
 
 .leaderboard-item{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  background:rgba(0,0,0,0.7);
-  border:2px solid white;
-  margin:6px;
-  padding:8px;
-  font-size:10px;
-  opacity:0;
-  transform:translateY(20px);
-  animation:fade 0.5s forwards;
+ display:flex;
+ justify-content:space-between;
+ background:#000;
+ padding:6px;
+ margin:5px;
+ border:1px solid white;
+ font-size:10px;
 }
 
-.top{
-  background:rgba(255,215,0,0.2);
-  box-shadow:0 0 15px gold;
-}
-
-@keyframes fade{
-  to{opacity:1; transform:translateY(0);}
-}
+.top{background:gold;color:black}
 
 .hidden{display:none}
 
-/* CONFETTI */
 .confetti{
-  position:absolute;
-  width:6px;height:6px;
-  animation:fall 1s linear forwards;
+ position:absolute;
+ width:6px;height:6px;
+ animation:fall 1s linear forwards;
 }
 @keyframes fall{
-  to{transform:translateY(200px);opacity:0;}
+ to{transform:translateY(200px);opacity:0;}
 }
 </style>
 </head>
@@ -136,112 +97,96 @@ canvas{
 <div class="container">
 
 <div id="setup" class="card">
-  <h3>CHỌN NHÂN VẬT</h3>
-  <input id="username" placeholder="Tên"><br><br>
-  <div id="avatars"></div>
-  <button onclick="startGame()">PLAY</button>
+<h3>CHỌN NHÂN VẬT</h3>
+<input id="username" placeholder="Tên"><br><br>
+<div id="avatars"></div>
+<button onclick="startGame()">PLAY</button>
 </div>
 
 <div id="game" class="card hidden">
-  <canvas id="canvas"></canvas>
-  <div id="timer">Time: 0s</div>
-  <div>
-    <button onclick="undo()">UNDO</button>
-    <button onclick="restart()">RESTART</button>
-    <button onclick="hint()">HINT</button>
-    <button onclick="solve()">SOLVE</button>
-  </div>
+<canvas id="canvas"></canvas>
+<div id="timer">Time: 0s</div>
+<button onclick="undo()">UNDO</button>
+<button onclick="restart()">RESTART</button>
+<button onclick="hint()">HINT</button>
+<button onclick="solve()">SOLVE</button>
 </div>
 
 <div id="win" class="card hidden">
-  <h3>🎉 BẠN ĐÃ THẮNG!</h3>
-  <p id="win-msg"></p>
-  <button onclick="nextLevel()">NEXT</button>
-  <button onclick="showLeaderboard()">RANK</button>
+<h3>🎉 BẠN ĐÃ THẮNG!</h3>
+<p id="win-msg"></p>
+<button onclick="nextLevel()">NEXT</button>
+<button onclick="showLeaderboard()">RANK</button>
 </div>
 
 <div id="leaderboard" class="card leaderboard hidden">
-  <h3>🏆 LEADERBOARD</h3>
-  <div id="lb"></div>
-  <button onclick="closeLeaderboard()">CLOSE</button>
+<h3>🏆 LEADERBOARD</h3>
+<div id="lb"></div>
+<button onclick="closeLeaderboard()">CLOSE</button>
 </div>
 
 </div>
 
 <script>
-let player, level=1, graph, path=[], selectedAvatar=null;
-let startTime, timerInterval;
+let player, level=1, graph, path=[], selectedAvatar;
+let canvas=document.getElementById("canvas");
+let ctx=canvas.getContext("2d");
+canvas.width=800;canvas.height=420;
 
-let canvas=document.getElementById('canvas');
-let ctx=canvas.getContext('2d');
-canvas.width=800; canvas.height=420;
+let startTime,timerInterval;
 
 /* TIMER */
 function startTimer(){
-  startTime = Date.now();
-  timerInterval = setInterval(()=>{
-    let t = Math.floor((Date.now()-startTime)/1000);
-    document.getElementById("timer").innerText = "Time: " + t + "s";
-  },1000);
+ startTime=Date.now();
+ timerInterval=setInterval(()=>{
+  let t=Math.floor((Date.now()-startTime)/1000);
+  document.getElementById("timer").innerText="Time: "+t+"s";
+ },1000);
 }
 function stopTimer(){
-  clearInterval(timerInterval);
-  return Math.floor((Date.now()-startTime)/1000);
+ clearInterval(timerInterval);
+ return Math.floor((Date.now()-startTime)/1000);
 }
 
 /* AVATAR */
 function randColor(){
-  const c=["#ff4da6","#22d3ee","#a855f7","#facc15","#00ffcc"];
-  return c[Math.floor(Math.random()*c.length)];
+ const c=["#ff4da6","#22d3ee","#a855f7","#facc15","#00ffcc"];
+ return c[Math.floor(Math.random()*c.length)];
 }
 
-function createAvatar(colors){
-  let c=document.createElement("canvas");
-  c.width=16;c.height=16;
-  let ctx=c.getContext("2d");
+function createAvatar(){
+ let c=document.createElement("canvas");
+ c.width=16;c.height=16;
+ let x=c.getContext("2d");
 
-  let p=[[0,1,1,1,1,1,1,0],[1,2,2,2,2,2,2,1],[1,2,3,2,2,3,2,1],[1,2,2,2,2,2,2,1],[1,3,2,2,2,2,3,1],[1,2,3,3,3,3,2,1],[0,1,2,2,2,2,1,0],[0,0,1,1,1,1,0,0]];
-
-  for(let y=0;y<8;y++){
-    for(let x=0;x<8;x++){
-      let v=p[y][x];
-      if(v){
-        ctx.fillStyle=colors[v];
-        ctx.fillRect(x*2,y*2,2,2);
-      }
-    }
+ for(let i=0;i<16;i++){
+  for(let j=0;j<16;j++){
+   x.fillStyle=Math.random()>0.5?randColor():"#000";
+   x.fillRect(i,j,1,1);
   }
-  return c.toDataURL();
+ }
+ return c.toDataURL();
 }
 
-const avatarList=[...Array(20)].map(()=>createAvatar({1:randColor(),2:randColor(),3:"#000"}));
+let avatars=[...Array(20)].map(createAvatar);
 
 function loadAvatars(){
-  let box=document.getElementById('avatars');
-  avatarList.forEach(src=>{
-    let img=document.createElement('img');
-    img.src=src;
-    img.className='avatar';
-    img.onclick=()=>{
-      document.querySelectorAll('.avatar').forEach(a=>a.classList.remove('selected'));
-      img.classList.add('selected');
-      selectedAvatar=src;
-    };
-    box.appendChild(img);
-  });
+ let box=document.getElementById("avatars");
+ avatars.forEach(src=>{
+  let img=document.createElement("img");
+  img.src=src;
+  img.className="avatar";
+  img.onclick=()=>{
+   document.querySelectorAll(".avatar").forEach(a=>a.classList.remove("selected"));
+   img.classList.add("selected");
+   selectedAvatar=src;
+  };
+  box.appendChild(img);
+ });
 }
 loadAvatars();
 
-function startGame(){
-  let name=document.getElementById('username').value;
-  if(!name||!selectedAvatar) return alert("Nhập đủ!");
-  player={name,avatar:selectedAvatar};
-  document.getElementById('setup').style.display='none';
-  document.getElementById('game').classList.remove('hidden');
-  initGame();
-}
-
-/* GRAPH + GAME giữ nguyên */
+/* GRAPH */
 class Graph{
  constructor(n){
   this.nodes=[];this.edges={};
@@ -249,17 +194,14 @@ class Graph{
   const ok=(nodes,x,y)=>nodes.every(n=>Math.hypot(n.x-x,n.y-y)>MIN);
 
   for(let i=0;i<n;i++){
-    let x,y,t=0;
-    do{
-      x=Math.random()*0.8+0.1;
-      y=Math.random()*0.8+0.1;
-      t++;
-    }while(!ok(this.nodes,x,y)&&t<100);
-
-    this.nodes.push({id:i,x,y});
-    this.edges[i]=[];
+   let x,y;
+   do{
+    x=Math.random()*0.8+0.1;
+    y=Math.random()*0.8+0.1;
+   }while(!ok(this.nodes,x,y));
+   this.nodes.push({id:i,x,y});
+   this.edges[i]=[];
   }
-
   for(let i=0;i<n-1;i++) this.connect(i,i+1);
  }
 
@@ -273,95 +215,215 @@ class Graph{
  }
 }
 
-function initGame(){
-  graph=new Graph(level+4);
-  path=[];
-  draw();
-  startTimer(); // 🔥 bắt đầu đếm giờ
+/* GAME */
+function startGame(){
+ let name=document.getElementById("username").value;
+ if(!name||!selectedAvatar) return alert("Nhập đủ!");
+ player={name,avatar:selectedAvatar};
+ document.getElementById("setup").style.display="none";
+ document.getElementById("game").classList.remove("hidden");
+ initGame();
 }
 
+function initGame(){
+ graph=new Graph(level+4);
+ path=[];
+ startTimer();
+}
+
+/* CLICK */
 canvas.onclick=e=>{
  let r=canvas.getBoundingClientRect();
  let x=(e.clientX-r.left)/r.width;
  let y=(e.clientY-r.top)/r.height;
 
  graph.nodes.forEach(n=>{
-   if(Math.hypot(n.x-x,n.y-y)<0.05){
-     clickNode(n.id);
+  if(Math.hypot(n.x-x,n.y-y)<0.05){
+   if(path.length===0 || graph.isConnected(path[path.length-1],n.id)){
+    path.push(n.id);
+    if(path.length===graph.nodes.length) win();
    }
+  }
  });
 };
 
-function clickNode(id){
- if(path.length===0 || graph.isConnected(path[path.length-1],id)){
-   path.push(id);
-   if(path.length===graph.nodes.length) win();
- }
- draw();
-}
+/* DRAW VISUAL MAX */
+let stars=[...Array(100)].map(()=>({
+ x:Math.random()*800,
+ y:Math.random()*420,
+ r:Math.random()*1.5
+}));
 
 function draw(){
- ctx.clearRect(0,0,800,420);
- graph.nodes.forEach(n=>{
-  ctx.fillStyle=path.includes(n.id)?'#a855f7':'#fff';
-  ctx.fillRect(n.x*800-5,n.y*420-5,10,10);
+ let grad=ctx.createLinearGradient(0,0,800,420);
+ grad.addColorStop(0,"#020617");
+ grad.addColorStop(1,"#0f172a");
+ ctx.fillStyle=grad;
+ ctx.fillRect(0,0,800,420);
+
+ // stars
+ stars.forEach(s=>{
+  ctx.globalAlpha=Math.random();
+  ctx.beginPath();
+  ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
+  ctx.fillStyle="white";
+  ctx.fill();
  });
+ ctx.globalAlpha=1;
+
+ // edges
+ graph.nodes.forEach(n=>{
+  graph.edges[n.id].forEach(e=>{
+   let b=graph.nodes[e];
+   ctx.strokeStyle="rgba(255,255,255,0.08)";
+   ctx.beginPath();
+   ctx.moveTo(n.x*800,n.y*420);
+   ctx.lineTo(b.x*800,b.y*420);
+   ctx.stroke();
+  });
+ });
+
+ // path glow
+ ctx.lineWidth=6;
+ ctx.lineCap="round";
+ ctx.shadowBlur=20;
+
+ for(let i=0;i<path.length-1;i++){
+  let a=graph.nodes[path[i]];
+  let b=graph.nodes[path[i+1]];
+  ctx.strokeStyle=i%2?"#22d3ee":"#ff4da6";
+  ctx.shadowColor=ctx.strokeStyle;
+  ctx.beginPath();
+  ctx.moveTo(a.x*800,a.y*420);
+  ctx.lineTo(b.x*800,b.y*420);
+  ctx.stroke();
+ }
+ ctx.shadowBlur=0;
+
+ // nodes
+ graph.nodes.forEach(n=>{
+  let x=n.x*800,y=n.y*420;
+  let v=path.includes(n.id);
+
+  ctx.beginPath();
+  ctx.arc(x,y,10,0,Math.PI*2);
+  ctx.fillStyle=v?"#ff4da6":"#fff";
+  ctx.shadowColor=v?"#ff4da6":"#22d3ee";
+  ctx.shadowBlur=15;
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.arc(x,y,4,0,Math.PI*2);
+  ctx.fillStyle="#000";
+  ctx.fill();
+ });
+ ctx.shadowBlur=0;
 }
+
+function loop(){
+ draw();
+ requestAnimationFrame(loop);
+}
+loop();
+
+/* SOLVE */
+function solve(){
+ let n=graph.nodes.length;
+ let visited=new Array(n).fill(false);
+ let res=[];
+
+ function dfs(u){
+  res.push(u);visited[u]=true;
+  if(res.length===n) return true;
+  for(let v of graph.edges[u]){
+   if(!visited[v]) if(dfs(v)) return true;
+  }
+  visited[u]=false;res.pop();
+ }
+
+ for(let i=0;i<n;i++){
+  if(dfs(i)){path=res;return;}
+ }
+}
+
+/* ACTION */
+function hint(){
+ for(let i=0;i<graph.nodes.length;i++){
+  if(!path.includes(i)){
+   if(path.length===0||graph.isConnected(path[path.length-1],i)){
+    path.push(i);break;
+   }
+  }
+ }
+}
+function undo(){path.pop()}
+function restart(){initGame()}
 
 /* WIN */
 function win(){
- let time = stopTimer();
+ let time=stopTimer();
+ document.getElementById("win").classList.remove("hidden");
 
- document.getElementById('win').classList.remove('hidden');
+ let msg=`Bạn đã thắng trong ${time}s\n`;
+ msg+=`Đi qua ${graph.nodes.length} đỉnh (không lặp)\n`;
+ msg+="Path: "+path.join(" → ");
 
- let msg = `Bạn đã thắng trong ${time} giây 🎯\n`;
- msg += `Bạn đi qua ${graph.nodes.length} đỉnh (không lặp) → ĐƯỜNG HAMILTON\n`;
- msg += "Path: " + path.join(" → ");
-
- document.getElementById("win-msg").innerText = msg;
+ document.getElementById("win-msg").innerText=msg;
 
  saveScore(time);
  renderLeaderboard();
+ confetti();
+}
+
+function confetti(){
+ for(let i=0;i<40;i++){
+  let c=document.createElement("div");
+  c.className="confetti";
+  c.style.left=Math.random()*window.innerWidth+"px";
+  c.style.background=randColor();
+  document.body.appendChild(c);
+  setTimeout(()=>c.remove(),1000);
+ }
 }
 
 /* LEADERBOARD */
 function saveScore(time){
- let data=JSON.parse(localStorage.getItem('lb')||'[]');
+ let data=JSON.parse(localStorage.getItem("lb")||"[]");
  data.push({name:player.name,avatar:player.avatar,level,time});
  data.sort((a,b)=>a.time-b.time);
- localStorage.setItem('lb',JSON.stringify(data.slice(0,10)));
+ localStorage.setItem("lb",JSON.stringify(data.slice(0,10)));
 }
 
 function renderLeaderboard(){
- let lb=document.getElementById('lb');
- lb.innerHTML='';
- let data=JSON.parse(localStorage.getItem('lb')||'[]');
+ let lb=document.getElementById("lb");
+ lb.innerHTML="";
+ let data=JSON.parse(localStorage.getItem("lb")||"[]");
 
  data.forEach((p,i)=>{
-  let d=document.createElement('div');
-  d.className='leaderboard-item'+(i===0?' top':'');
-  d.innerHTML=`
-  #${i+1}
-  <img src="${p.avatar}" width="25">
-  ${p.name}
-  Lv${p.level}
-  ${p.time}s
-  `;
+  let d=document.createElement("div");
+  d.className="leaderboard-item"+(i===0?" top":"");
+  d.innerHTML=`#${i+1} <img src="${p.avatar}" width="25"> ${p.name} Lv${p.level} ${p.time}s`;
   lb.appendChild(d);
  });
 }
 
 function showLeaderboard(){
- let board=document.getElementById('leaderboard');
- board.classList.remove('hidden');
- setTimeout(()=>board.classList.add('show'),10);
+ let b=document.getElementById("leaderboard");
+ b.classList.remove("hidden");
+ setTimeout(()=>b.classList.add("show"),10);
  renderLeaderboard();
 }
 
 function closeLeaderboard(){
- let board=document.getElementById('leaderboard');
- board.classList.remove('show');
- setTimeout(()=>board.classList.add('hidden'),400);
+ let b=document.getElementById("leaderboard");
+ b.classList.remove("show");
+ setTimeout(()=>b.classList.add("hidden"),400);
+}
+
+function nextLevel(){
+ level++;
+ document.getElementById("win").classList.add("hidden");
+ initGame();
 }
 </script>
 
