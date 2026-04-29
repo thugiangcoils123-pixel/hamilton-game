@@ -62,6 +62,13 @@ canvas{
   border:4px solid white;
 }
 
+/* TIMER */
+#timer{
+  margin-top:10px;
+  font-size:12px;
+  color:#facc15;
+}
+
 /* AVATAR */
 .avatar{
   width:60px;height:60px;
@@ -95,6 +102,7 @@ canvas{
   border:2px solid white;
   margin:6px;
   padding:8px;
+  font-size:10px;
   opacity:0;
   transform:translateY(20px);
   animation:fade 0.5s forwards;
@@ -103,7 +111,6 @@ canvas{
 .top{
   background:rgba(255,215,0,0.2);
   box-shadow:0 0 15px gold;
-  transform:scale(1.05);
 }
 
 @keyframes fade{
@@ -137,6 +144,7 @@ canvas{
 
 <div id="game" class="card hidden">
   <canvas id="canvas"></canvas>
+  <div id="timer">Time: 0s</div>
   <div>
     <button onclick="undo()">UNDO</button>
     <button onclick="restart()">RESTART</button>
@@ -146,13 +154,14 @@ canvas{
 </div>
 
 <div id="win" class="card hidden">
-  <h3>YOU WIN!</h3>
+  <h3>🎉 BẠN ĐÃ THẮNG!</h3>
+  <p id="win-msg"></p>
   <button onclick="nextLevel()">NEXT</button>
   <button onclick="showLeaderboard()">RANK</button>
 </div>
 
 <div id="leaderboard" class="card leaderboard hidden">
-  <h3>🏆 RANK</h3>
+  <h3>🏆 LEADERBOARD</h3>
   <div id="lb"></div>
   <button onclick="closeLeaderboard()">CLOSE</button>
 </div>
@@ -161,9 +170,24 @@ canvas{
 
 <script>
 let player, level=1, graph, path=[], selectedAvatar=null;
+let startTime, timerInterval;
+
 let canvas=document.getElementById('canvas');
 let ctx=canvas.getContext('2d');
 canvas.width=800; canvas.height=420;
+
+/* TIMER */
+function startTimer(){
+  startTime = Date.now();
+  timerInterval = setInterval(()=>{
+    let t = Math.floor((Date.now()-startTime)/1000);
+    document.getElementById("timer").innerText = "Time: " + t + "s";
+  },1000);
+}
+function stopTimer(){
+  clearInterval(timerInterval);
+  return Math.floor((Date.now()-startTime)/1000);
+}
 
 /* AVATAR */
 function randColor(){
@@ -176,16 +200,7 @@ function createAvatar(colors){
   c.width=16;c.height=16;
   let ctx=c.getContext("2d");
 
-  let p=[
-    [0,1,1,1,1,1,1,0],
-    [1,2,2,2,2,2,2,1],
-    [1,2,3,2,2,3,2,1],
-    [1,2,2,2,2,2,2,1],
-    [1,3,2,2,2,2,3,1],
-    [1,2,3,3,3,3,2,1],
-    [0,1,2,2,2,2,1,0],
-    [0,0,1,1,1,1,0,0],
-  ];
+  let p=[[0,1,1,1,1,1,1,0],[1,2,2,2,2,2,2,1],[1,2,3,2,2,3,2,1],[1,2,2,2,2,2,2,1],[1,3,2,2,2,2,3,1],[1,2,3,3,3,3,2,1],[0,1,2,2,2,2,1,0],[0,0,1,1,1,1,0,0]];
 
   for(let y=0;y<8;y++){
     for(let x=0;x<8;x++){
@@ -199,19 +214,7 @@ function createAvatar(colors){
   return c.toDataURL();
 }
 
-function genAvatars(n=20){
-  let list=[];
-  for(let i=0;i<n;i++){
-    list.push(createAvatar({
-      1: randColor(),
-      2: randColor(),
-      3: "#000"
-    }));
-  }
-  return list;
-}
-
-const avatarList=genAvatars(20);
+const avatarList=[...Array(20)].map(()=>createAvatar({1:randColor(),2:randColor(),3:"#000"}));
 
 function loadAvatars(){
   let box=document.getElementById('avatars');
@@ -238,7 +241,7 @@ function startGame(){
   initGame();
 }
 
-/* GRAPH */
+/* GRAPH + GAME giữ nguyên */
 class Graph{
  constructor(n){
   this.nodes=[];this.edges={};
@@ -258,11 +261,6 @@ class Graph{
   }
 
   for(let i=0;i<n-1;i++) this.connect(i,i+1);
-  for(let i=0;i<n;i++){
-    for(let j=i+2;j<n;j++){
-      if(Math.random()<0.3) this.connect(i,j);
-    }
-  }
  }
 
  connect(a,b){
@@ -279,6 +277,7 @@ function initGame(){
   graph=new Graph(level+4);
   path=[];
   draw();
+  startTimer(); // 🔥 bắt đầu đếm giờ
 }
 
 canvas.onclick=e=>{
@@ -301,127 +300,35 @@ function clickNode(id){
  draw();
 }
 
-/* DRAW */
 function draw(){
  ctx.clearRect(0,0,800,420);
-
- graph.nodes.forEach(n=>{
-   graph.edges[n.id].forEach(e=>{
-     let b=graph.nodes[e];
-     ctx.strokeStyle='rgba(255,255,255,0.1)';
-     ctx.beginPath();
-     ctx.moveTo(n.x*800,n.y*420);
-     ctx.lineTo(b.x*800,b.y*420);
-     ctx.stroke();
-   });
- });
-
- ctx.strokeStyle='#ff4da6';
- ctx.lineWidth=5;
- ctx.shadowColor="#ff4da6";
- ctx.shadowBlur=15;
-
- for(let i=0;i<path.length-1;i++){
-  let a=graph.nodes[path[i]];
-  let b=graph.nodes[path[i+1]];
-  ctx.beginPath();
-  ctx.moveTo(a.x*800,a.y*420);
-  ctx.lineTo(b.x*800,b.y*420);
-  ctx.stroke();
- }
-
- ctx.shadowBlur=0;
-
  graph.nodes.forEach(n=>{
   ctx.fillStyle=path.includes(n.id)?'#a855f7':'#fff';
   ctx.fillRect(n.x*800-5,n.y*420-5,10,10);
  });
 }
 
-/* DFS SOLVE */
-function findHamilton(){
- let n=graph.nodes.length;
- let visited=new Array(n).fill(false);
- let res=[];
-
- function dfs(node){
-   res.push(node);
-   visited[node]=true;
-
-   if(res.length===n) return true;
-
-   for(let next of graph.edges[node]){
-     if(!visited[next]){
-       if(dfs(next)) return true;
-     }
-   }
-
-   visited[node]=false;
-   res.pop();
-   return false;
- }
-
- for(let i=0;i<n;i++){
-   if(dfs(i)) return res;
-   visited.fill(false);
-   res=[];
- }
-
- return null;
-}
-
-function solve(){
- let s=findHamilton();
- if(!s) return alert("Không có!");
- path=s;
- draw();
-}
-
-/* ACTION */
-function hint(){
- for(let i=0;i<graph.nodes.length;i++){
-  if(!path.includes(i)){
-   if(path.length===0||graph.isConnected(path[path.length-1],i)){
-    path.push(i);
-    break;
-   }
-  }
- }
- draw();
-}
-function undo(){path.pop();draw();}
-function restart(){initGame();}
-
-function nextLevel(){
- level++;
- document.getElementById('win').classList.add('hidden');
- initGame();
-}
-
 /* WIN */
-function confetti(){
- for(let i=0;i<40;i++){
-  let c=document.createElement("div");
-  c.className="confetti";
-  c.style.left=Math.random()*window.innerWidth+"px";
-  c.style.background=randColor();
-  document.body.appendChild(c);
-  setTimeout(()=>c.remove(),1000);
- }
-}
-
 function win(){
+ let time = stopTimer();
+
  document.getElementById('win').classList.remove('hidden');
- confetti();
- saveScore();
+
+ let msg = `Bạn đã thắng trong ${time} giây 🎯\n`;
+ msg += `Bạn đi qua ${graph.nodes.length} đỉnh (không lặp) → ĐƯỜNG HAMILTON\n`;
+ msg += "Path: " + path.join(" → ");
+
+ document.getElementById("win-msg").innerText = msg;
+
+ saveScore(time);
  renderLeaderboard();
 }
 
 /* LEADERBOARD */
-function saveScore(){
+function saveScore(time){
  let data=JSON.parse(localStorage.getItem('lb')||'[]');
- data.push({name:player.name,avatar:player.avatar,level});
- data.sort((a,b)=>b.level-a.level);
+ data.push({name:player.name,avatar:player.avatar,level,time});
+ data.sort((a,b)=>a.time-b.time);
  localStorage.setItem('lb',JSON.stringify(data.slice(0,10)));
 }
 
@@ -433,13 +340,12 @@ function renderLeaderboard(){
  data.forEach((p,i)=>{
   let d=document.createElement('div');
   d.className='leaderboard-item'+(i===0?' top':'');
-  d.style.animationDelay=(i*0.1)+'s';
-
   d.innerHTML=`
-    <span>#${i+1}</span>
-    <img src='${p.avatar}' width='30'>
-    <span>${p.name}</span>
-    <span>Lv ${p.level}</span>
+  #${i+1}
+  <img src="${p.avatar}" width="25">
+  ${p.name}
+  Lv${p.level}
+  ${p.time}s
   `;
   lb.appendChild(d);
  });
