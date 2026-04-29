@@ -1,327 +1,226 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="vi">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Hamilton Cozy Game</title>
-
+<title>Hamilton Galaxy Game</title>
 <style>
-body {
-  margin: 0;
-  background: #f6e6c9;
-  color: #5a3e2b;
-  font-family: "Nunito", cursive;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-h1 { color: #c47a2c; }
-
-canvas {
-  width: 100%;
-  max-width: 600px;
-  aspect-ratio: 6/5;
-  background: #fff8ec;
-  border-radius: 16px;
-  border: 2px solid #e0c097;
-}
-
-button {
-  margin: 5px;
-  padding: 10px;
-  background: #ffb84c;
-  border-radius: 10px;
-  border: none;
-}
-
-.avatar { font-size: 28px; cursor: pointer; }
-.selected { outline: 2px dashed orange; }
-
-#scores { list-style: none; padding: 0; }
-
-.hidden { display: none; }
+:root{--bg:#020617;--g1:#0f172a;--g2:#1e293b;--neon:#22d3ee;--neon2:#a78bfa;--gold:#facc15;--text:#e2e8f0}
+body{margin:0;font-family:'Segoe UI',sans-serif;background:radial-gradient(circle at top,var(--g2),var(--bg));color:var(--text);display:flex;justify-content:center;align-items:center;height:100vh}
+.container{width:95%;max-width:900px}
+.card{background:rgba(255,255,255,0.05);backdrop-filter:blur(15px);border-radius:20px;padding:20px;box-shadow:0 0 40px rgba(0,0,0,0.7)}
+.hidden{display:none}
+button{background:linear-gradient(45deg,var(--neon),var(--neon2));border:none;padding:10px 16px;border-radius:10px;color:white;cursor:pointer;transition:0.2s}
+button:hover{transform:scale(1.08);box-shadow:0 0 15px var(--neon)}
+canvas{width:100%;height:400px;background:#020617;border-radius:12px}
+.avatar{width:50px;height:50px;border-radius:50%;margin:5px;cursor:pointer;border:2px solid transparent}
+.avatar.selected{border:2px solid var(--neon);box-shadow:0 0 10px var(--neon)}
+.leaderboard{position:fixed;bottom:-100%;left:0;width:100%;max-width:900px;transition:0.5s}
+.leaderboard.show{bottom:20px}
+.leaderboard-item{display:flex;align-items:center;gap:10px;padding:10px;border-radius:12px;margin:6px 0;background:rgba(255,255,255,0.05);opacity:0;transform:translateY(20px);animation:fadeUp 0.5s forwards}
+.leaderboard-item.top{background:rgba(250,204,21,0.15);box-shadow:0 0 15px var(--gold);transform:scale(1.05)}
+.rank{font-weight:bold;width:30px}
+.lb-avatar{width:42px;height:42px;border-radius:50%}
+@keyframes fadeUp{to{opacity:1;transform:translateY(0)}}
+.crown{font-size:18px;color:var(--gold)}
 </style>
 </head>
-
 <body>
+<div class="container">
 
-<h1>🌿 Hamilton Cozy Game</h1>
-
-<div id="setup">
-  <input id="username" placeholder="Enter name">
+<div id="setup" class="card">
+  <h2>Galaxy Hamilton</h2>
+  <input id="username" placeholder="Tên của bạn"><br><br>
   <div id="avatars"></div>
   <button onclick="startGame()">Start</button>
 </div>
 
-<div id="game" class="hidden">
-  <p id="info"></p>
+<div id="game" class="card hidden">
   <canvas id="canvas"></canvas>
+  <div>
+    <button onclick="undo()">Undo</button>
+    <button onclick="restart()">Restart</button>
+    <button onclick="hint()">Hint</button>
+  </div>
+</div>
 
-  <br>
-  <button onclick="undo()">Undo</button>
-  <button onclick="resetGame()">Reset</button>
-  <button onclick="showSolution()">Answer</button>
-  <button onclick="checkImpossible()">Impossible</button>
+<div id="win" class="card hidden">
+  <h2>✨ Victory ✨</h2>
+  <button onclick="nextLevel()">Next</button>
+  <button onclick="showLeaderboard()">Leaderboard</button>
+</div>
 
-  <h3>🏆 Daily Leaderboard</h3>
-  <ul id="scores"></ul>
+<div id="leaderboard" class="card leaderboard hidden">
+  <h2>🏆 Bảng xếp hạng</h2>
+  <div id="lb-list"></div>
+  <button onclick="closeLeaderboard()">Đóng</button>
+</div>
+
 </div>
 
 <script>
-const winSound = new Audio("https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg");
-const errorSound = new Audio("https://actions.google.com/sounds/v1/cartoon/pop.ogg");
+let player,level=1,graph,path=[],hoverNode=null,selectedAvatar=null;
+let canvas=document.getElementById('canvas');
+let ctx=canvas.getContext('2d');
+canvas.width=800;canvas.height=400;
 
-let player = {};
-let usedHint = false;
+// Star Wars avatars
+const avatarList=[
+ 'https://starwars-visualguide.com/assets/img/characters/1.jpg',
+ 'https://starwars-visualguide.com/assets/img/characters/4.jpg',
+ 'https://starwars-visualguide.com/assets/img/characters/13.jpg',
+ 'https://starwars-visualguide.com/assets/img/characters/20.jpg',
+ 'https://starwars-visualguide.com/assets/img/characters/14.jpg'
+];
 
-const avatars = ["🐻","🐰","🦊","🐱","🐶","🐼","🦌","🐸"];
-let selected=null;
-
-avatars.forEach(a=>{
-  let el=document.createElement("span");
-  el.innerText=a;
-  el.className="avatar";
-  el.onclick=()=>{
-    document.querySelectorAll(".avatar").forEach(x=>x.classList.remove("selected"));
-    el.classList.add("selected");
-    selected=a;
+function loadAvatars(){
+ let box=document.getElementById('avatars');
+ avatarList.forEach(src=>{
+  let img=document.createElement('img');
+  img.src=src;img.className='avatar';
+  img.onclick=()=>{
+    document.querySelectorAll('.avatar').forEach(a=>a.classList.remove('selected'));
+    img.classList.add('selected');
+    selectedAvatar=src;
   };
-  document.getElementById("avatars").appendChild(el);
-});
+  box.appendChild(img);
+ });
+}
+loadAvatars();
 
 function startGame(){
-  let name=document.getElementById("username").value;
-  if(!name||!selected){alert("Nhập đủ");return;}
-  player={name,avatar:selected};
-  window.player = player;
-
-  document.getElementById("setup").classList.add("hidden");
-  document.getElementById("game").classList.remove("hidden");
-
-  initGame();
+ let name=document.getElementById('username').value;
+ if(!name||!selectedAvatar) return alert('Nhập tên và chọn avatar');
+ player={name,avatar:selectedAvatar};
+ document.getElementById('setup').classList.add('hidden');
+ document.getElementById('game').classList.remove('hidden');
+ initGame();
 }
 
-/* GRAPH */
 class Graph{
-  constructor(n){
-    this.nodes=[];
-    this.edges={};
-    for(let i=0;i<n;i++){
-      this.nodes.push({id:i,x:Math.random(),y:Math.random()});
-      this.edges[i]=[];
-    }
-    for(let i=0;i<n-1;i++) this.connect(i,i+1);
-
-    for(let i=0;i<n;i++){
-      for(let j=i+2;j<n;j++){
-        if(Math.random()<0.3) this.connect(i,j);
-      }
-    }
-  }
-  connect(a,b){
-    this.edges[a].push(b);
-    this.edges[b].push(a);
-  }
-  isConnected(a,b){
-    return this.edges[a].includes(b);
-  }
-}
-
-/* ENGINE */
-class Engine{
-  constructor(graph){
-    this.graph=graph;
-    this.path=[];
-  }
-
-  move(to){
-    if(this.path.length===0){
-      this.path.push(to);
-      return;
-    }
-
-    let last=this.path[this.path.length-1];
-
-    if(!this.graph.isConnected(last,to)){
-      errorSound.play(); return;
-    }
-    if(this.path.includes(to)){
-      errorSound.play(); return;
-    }
-
-    this.path.push(to);
-  }
-
-  undo(){ this.path.pop(); }
-
-  complete(){
-    return this.path.length===this.graph.nodes.length;
-  }
-}
-
-let canvas=document.getElementById("canvas");
-let ctx=canvas.getContext("2d");
-
-let graph,engine,solution;
-let startTime;
-
-function resize(){
-  let r=canvas.getBoundingClientRect();
-  canvas.width=r.width;
-  canvas.height=r.height;
-}
-window.addEventListener("resize",resize);
-
-function initGame(){
-  resize();
-  graph=new Graph(8);
-  engine=new Engine(graph);
-  solution=findSolution(graph);
-  startTime=Date.now();
-  usedHint=false;
-  draw();
-}
-
-/* SOLVER */
-function findSolution(graph){
-  let n=graph.nodes.length;
-
-  function dfs(node,visited,path){
-    if(path.length===n) return path;
-
-    for(let next of graph.edges[node]){
-      if(!visited.has(next)){
-        visited.add(next);
-        let res=dfs(next,visited,[...path,next]);
-        if(res) return res;
-        visited.delete(next);
-      }
-    }
-    return null;
-  }
-
+ constructor(n){
+  this.nodes=[];this.edges={};
+  const MIN=0.18;
+  const ok=(nodes,x,y)=>nodes.every(n=>Math.hypot(n.x-x,n.y-y)>MIN);
   for(let i=0;i<n;i++){
-    let v=new Set([i]);
-    let res=dfs(i,v,[i]);
-    if(res) return res;
+    let x,y,t=0;
+    do{x=0.1+Math.random()*0.8;y=0.1+Math.random()*0.8;t++;}
+    while(!ok(this.nodes,x,y)&&t<100);
+    this.nodes.push({id:i,x,y});this.edges[i]=[];
   }
-  return null;
+  for(let i=0;i<n-1;i++) this.connect(i,i+1);
+  for(let i=0;i<n;i++)for(let j=i+2;j<n;j++)if(Math.random()<0.3)this.connect(i,j);
+ }
+ connect(a,b){this.edges[a].push(b);this.edges[b].push(a)}
+ isConnected(a,b){return this.edges[a].includes(b)}
 }
 
-/* DRAW */
+function initGame(){graph=new Graph(level+4);path=[];draw();}
+
+canvas.onclick=e=>{
+ let r=canvas.getBoundingClientRect();
+ let x=(e.clientX-r.left)/r.width;
+ let y=(e.clientY-r.top)/r.height;
+ graph.nodes.forEach(n=>{
+  if(Math.hypot(n.x-x,n.y-y)<0.05) clickNode(n.id);
+ });
+}
+
+canvas.onmousemove=e=>{
+ let r=canvas.getBoundingClientRect();
+ let x=(e.clientX-r.left)/r.width;
+ let y=(e.clientY-r.top)/r.height;
+ hoverNode=null;
+ graph.nodes.forEach(n=>{
+  if(Math.hypot(n.x-x,n.y-y)<0.05) hoverNode=n.id;
+ });
+ draw();
+}
+
+function clickNode(id){
+ if(path.length===0||graph.isConnected(path[path.length-1],id)){
+  path.push(id);
+  if(path.length===graph.nodes.length) win();
+ }
+ draw();
+}
+
 function draw(){
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-
-  graph.nodes.forEach(n=>{
-    graph.edges[n.id].forEach(to=>{
-      let t=graph.nodes[to];
-      ctx.strokeStyle="#cdb38b";
-      ctx.beginPath();
-      ctx.moveTo(n.x*canvas.width,n.y*canvas.height);
-      ctx.lineTo(t.x*canvas.width,t.y*canvas.height);
-      ctx.stroke();
-    });
+ ctx.clearRect(0,0,800,400);
+ graph.nodes.forEach(n=>{
+  graph.edges[n.id].forEach(e=>{
+    let b=graph.nodes[e];
+    ctx.strokeStyle='rgba(255,255,255,0.1)';
+    ctx.beginPath();ctx.moveTo(n.x*800,n.y*400);
+    ctx.lineTo(b.x*800,b.y*400);ctx.stroke();
   });
+ });
+ for(let i=0;i<path.length-1;i++){
+  let a=graph.nodes[path[i]],b=graph.nodes[path[i+1]];
+  ctx.strokeStyle='#22d3ee';ctx.shadowColor='#22d3ee';ctx.shadowBlur=15;
+  ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(a.x*800,a.y*400);
+  ctx.lineTo(b.x*800,b.y*400);ctx.stroke();ctx.shadowBlur=0;
+ }
+ graph.nodes.forEach(n=>{
+  ctx.beginPath();
+  ctx.fillStyle=path.includes(n.id)?'#a78bfa':'#fff';
+  if(n.id===hoverNode){ctx.fillStyle='#22d3ee';ctx.shadowBlur=20;ctx.shadowColor='#22d3ee';}
+  ctx.arc(n.x*800,n.y*400,8,0,Math.PI*2);
+  ctx.fill();ctx.shadowBlur=0;
+ });
+}
 
-  for(let i=0;i<engine.path.length-1;i++){
-    let a=graph.nodes[engine.path[i]];
-    let b=graph.nodes[engine.path[i+1]];
-    ctx.strokeStyle="#6ec1a6";
-    ctx.lineWidth=4;
-    ctx.beginPath();
-    ctx.moveTo(a.x*canvas.width,a.y*canvas.height);
-    ctx.lineTo(b.x*canvas.width,b.y*canvas.height);
-    ctx.stroke();
-  }
-
-  graph.nodes.forEach(n=>{
-    let nx=n.x*canvas.width, ny=n.y*canvas.height;
-    ctx.beginPath();
-    ctx.arc(nx,ny,14,0,Math.PI*2);
-    ctx.fillStyle=engine.path.includes(n.id)?"#ff9f68":"#8fd19e";
-    ctx.fill();
-    ctx.strokeStyle="#fff";
-    ctx.stroke();
-  });
-
-  if(engine.complete()){
-    let time=Math.floor((Date.now()-startTime)/1000);
-
-    if(!usedHint){
-      winSound.play();
-      saveScore(time);
-      alert("WIN "+time+"s 🎉");
-    } else {
-      alert("Solved (no score vì dùng Answer)");
+function hint(){
+ for(let i=0;i<graph.nodes.length;i++){
+  if(!path.includes(i)){
+    if(path.length===0||graph.isConnected(path[path.length-1],i)){
+      path.push(i);break;
     }
   }
+ }
+ draw();
 }
 
-/* INPUT */
-canvas.addEventListener("pointerdown",e=>{
-  let r=canvas.getBoundingClientRect();
-  let x=e.clientX-r.left,y=e.clientY-r.top;
+function undo(){path.pop();draw();}
+function restart(){initGame();}
+function nextLevel(){level++;document.getElementById('win').classList.add('hidden');initGame();}
 
-  graph.nodes.forEach(n=>{
-    let nx=n.x*canvas.width,ny=n.y*canvas.height;
-    if(Math.hypot(nx-x,ny-y)<15){
-      engine.move(n.id);
-      draw();
-    }
-  });
-});
-
-function undo(){engine.undo();draw();}
-function resetGame(){initGame();}
-function showSolution(){
-  if(solution){
-    engine.path=[...solution];
-    usedHint=true;
-    draw();
-  }
-}
-function checkImpossible(){
-  if(!solution) alert("Đúng, không có lời giải");
-  else alert("Sai, map này có lời giải");
+function win(){
+ document.getElementById('win').classList.remove('hidden');
+ saveScore();
 }
 
-/* LOCAL LEADERBOARD */
-function saveScore(time){
-  const today = new Date().toISOString().slice(0,10);
-
-  let scores = JSON.parse(localStorage.getItem("scores") || "[]");
-
-  scores.push({
-    name: player.name,
-    avatar: player.avatar,
-    time: time,
-    date: today
-  });
-
-  scores = scores.filter(s=>s.date===today);
-  scores.sort((a,b)=>a.time-b.time);
-  scores = scores.slice(0,10);
-
-  localStorage.setItem("scores",JSON.stringify(scores));
-  renderLeaderboard();
+function saveScore(){
+ let data=JSON.parse(localStorage.getItem('lb')||'[]');
+ data.push({name:player.name,avatar:player.avatar,level});
+ data.sort((a,b)=>b.level-a.level);
+ localStorage.setItem('lb',JSON.stringify(data.slice(0,10)));
 }
 
-function renderLeaderboard(){
-  let list=document.getElementById("scores");
-  list.innerHTML="";
-
-  let scores = JSON.parse(localStorage.getItem("scores") || "[]");
-
-  scores.forEach(s=>{
-    let li=document.createElement("li");
-    li.innerText=`${s.avatar} ${s.name} - ${s.time}s`;
-    list.appendChild(li);
-  });
+function showLeaderboard(){
+ let board=document.getElementById('leaderboard');
+ board.classList.remove('hidden');
+ setTimeout(()=>board.classList.add('show'),10);
+ let list=document.getElementById('lb-list');
+ list.innerHTML='';
+ let data=JSON.parse(localStorage.getItem('lb')||'[]');
+ data.forEach((p,i)=>{
+  let div=document.createElement('div');
+  div.className='leaderboard-item'+(i===0?' top':'');
+  div.style.animationDelay=(i*0.1)+'s';
+  div.innerHTML=`<div class='rank'>#${i+1}</div>
+  ${i===0?'<div class="crown">👑</div>':''}
+  <img src='${p.avatar}' class='lb-avatar'>
+  <div>${p.name} - Level ${p.level}</div>`;
+  list.appendChild(div);
+ });
 }
 
-renderLeaderboard();
+function closeLeaderboard(){
+ let board=document.getElementById('leaderboard');
+ board.classList.remove('show');
+ setTimeout(()=>board.classList.add('hidden'),400);
+}
 </script>
-
 </body>
 </html>
